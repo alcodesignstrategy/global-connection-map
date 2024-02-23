@@ -2,8 +2,6 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
-st.write(
-    """This shows your connections!!""")
 
 # Step 1: Load the Excel file
 uploaded_file = st.file_uploader("Choose an Excel file", type=["xlsx"])
