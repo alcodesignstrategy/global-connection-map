@@ -32,10 +32,10 @@ if uploaded_file is not None:
         data_for_map,
         get_position=["Longitude", "Latitude"],
         get_color="color",
-        get_radius=200000,  # Adjust size as needed
+        get_radius=200000,
     )
 
-    # Prepare curved lines for connections using GreatCircleLayer
+    # Prepare lines for connections
     lines_data = []
     for index, row in df.iterrows():
         if pd.notna(row['Other Connection ID']):
@@ -46,20 +46,28 @@ if uploaded_file is not None:
                 'color': [255, 165, 0]  # Orange
             })
 
-    great_circle_layer = pdk.Layer(
-        "GreatCircleLayer",
+    line_layer = pdk.Layer(
+        type="LineLayer",
         data=lines_data,
         get_source_position="source",
         get_target_position="target",
         get_color="color",
-        get_width=2,  # Reduced width for a finer line
+        get_width=2,
     )
 
     # Render the map
     st.pydeck_chart(pdk.Deck(
         map_style="mapbox://styles/mapbox/light-v9",
         initial_view_state=view_state,
-        layers=[scatterplot_layer, great_circle_layer],
+        layers=[scatterplot_layer, line_layer],
     ))
 else:
     st.text("Please upload an Excel file to get started.")
+
+# Add some instructions below the map
+st.markdown("""
+### Instructions
+- Use the "Upload your connections Excel file" button above to load your data.
+- Each dot represents a connection, color-coded by category.
+- Orange lines indicate the connections between different points.
+""")

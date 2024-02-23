@@ -1,77 +1,58 @@
-
-
-
 import streamlit as st
 import pandas as pd
-import pydeck as pdk
+import plotly.graph_objects as go
 
-
-st.set_page_config(page_title="HI", page_icon="📈")
-st.markdown("HI")
-st.sidebar.header("HI")
-st.write(
-    """This demo illustrates sdsdsdsd!"""
-)
-
-# Streamlit interface for file upload
-uploaded_file = st.file_uploader("Choose a file", type=['xlsx'])
-
+# Step 1: Load the Excel file
+uploaded_file = st.file_uploader("Choose an Excel file", type=["xlsx"])
 if uploaded_file is not None:
-    # Read data from the uploaded file
-    df = pd.read_excel(uploaded_file, engine='openpyxl')
+    df = pd.read_excel(uploaded_file, engine='openpyxl')  # Adjust "YourSheetName" as necessary
 
-    # Define color mapping for categories
-    color_map = {
-        'Business': [0, 128, 0],  # Green
-        'Research and Design': [64, 224, 208],  # Turquoise
-        'Technology': [0, 0, 255]  # Blue
-    }
+    # Step 2: Pre-process the DataFrame
+    # Assuming the DataFrame columns are properly named
+    df.dropna(subset=['Longitude', 'Latitude'], inplace=True)
 
-    # Prepare data for map
-    data_for_map = df.copy()
-    data_for_map['color'] = data_for_map['Category'].map(color_map)
+    # Step 3: Filter by Year
+    year = st.slider("Select a year", int(df['Year'].min()), int(df['Year'].max()))
+    df_filtered = df[df['Year'] <= year]
 
-    # Streamlit dashboard title
-    st.title("Connections Map")
+    # Create a dictionary to map ID Number to coordinates
+    id_to_coords = {row['ID Number']: (row['Longitude'], row['Latitude']) for index, row in df_filtered.iterrows()}
 
-    # Define the initial view state of the map
-    view_state = pdk.ViewState(latitude=0, longitude=-60, zoom=1)
+    fig = go.Figure()
 
-    # Prepare the scatter plot layer
-    scatterplot_layer = pdk.Layer(
-        "ScatterplotLayer",
-        data_for_map,
-        get_position=["Longitude", "Latitude"],
-        get_color="color",
-        get_radius=200000,  # Adjust size as needed
+    # Step 4: Plot Points
+    for _, row in df_filtered.iterrows():
+        fig.add_trace(go.Scattergeo(
+            locationmode='country names',
+            lon=[row['Longitude']],
+            lat=[row['Latitude']],
+            mode='markers',
+            marker=dict(size=5),
+            text=row['Name'],  # Display the name as hover text
+        ))
+
+    # Step 5: Plot Connections
+    for _, row in df_filtered.iterrows():
+        if row['Other Connection ID'] in id_to_coords:
+            start_lon, start_lat = row['Longitude'], row['Latitude']
+            end_lon, end_lat = id_to_coords[row['Other Connection ID']]
+            fig.add_trace(go.Scattergeo(
+                locationmode='country names',
+                lon=[start_lon, end_lon],
+                lat=[start_lat, end_lat],
+                mode='lines',
+                line=dict(width=1, color='red'),
+            ))
+
+    # Update layout for better visualization
+    fig.update_layout(
+        title_text='World Map of Connections for Selected Year',
+        geo=dict(
+            projection_type='equirectangular',
+            showland=True,
+            landcolor='rgb(243, 243, 243)',
+            countrycolor='rgb(204, 204, 204)',
+        )
     )
 
-    # Prepare curved lines for connections using GreatCircleLayer
-    lines_data = []
-    for index, row in df.iterrows():
-        if pd.notna(row['Other Connection ID']):
-            other = df[df['ID Number'] == row['Other Connection ID']].iloc[0]
-            lines_data.append({
-                'source': [row['Longitude'], row['Latitude']],
-                'target': [other['Longitude'], other['Latitude']],
-                'color': [255, 165, 0]  # Orange
-            })
-
-    great_circle_layer = pdk.Layer(
-        "GreatCircleLayer",
-        data=lines_data,
-        get_source_position="source",
-        get_target_position="target",
-        get_color="color",
-        get_width=2,  # Reduced width for a finer line
-    )
-
-    # Render the map
-    st.pydeck_chart(pdk.Deck(
-        map_style="mapbox://styles/mapbox/light-v9",
-        initial_view_state=view_state,
-        layers=[scatterplot_layer, great_circle_layer],
-    ))
-else:
-    st.text("Please upload an Excel file to get started.")
-
+    st.plotly_chart(fig)
