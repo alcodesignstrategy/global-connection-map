@@ -1,6 +1,17 @@
+
+
+
 import streamlit as st
 import pandas as pd
 import pydeck as pdk
+
+
+st.set_page_config(page_title="HI", page_icon="📈")
+st.markdown("HI")
+st.sidebar.header("HI")
+st.write(
+    """This demo illustrates sdsdsdsd!"""
+)
 
 # Streamlit interface for file upload
 uploaded_file = st.file_uploader("Choose a file", type=['xlsx'])
@@ -63,3 +74,4 @@ if uploaded_file is not None:
     ))
 else:
     st.text("Please upload an Excel file to get started.")
+
